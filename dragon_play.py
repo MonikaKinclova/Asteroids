@@ -120,7 +120,12 @@ class Dragon():
             self.x = window.width
         if self.y < 0:
             self.y = window.width  
-        
+    def tick(self, dt):
+        for obj in list(objects):
+            if overlaps(self, obj) and self != obj:
+                obj.hit_by_dragon(self)
+
+
 #vytvoření draka
 drak = Dragon()
 
@@ -252,7 +257,7 @@ class Asteroid_normal:
 #vytvoření normálního asteroidu
 asteroid = Asteroid_normal()
 
-
+objects = [drak, fire_asteroid,asteroid, astronaut]
 
 
 #ovládání draka (uloží zmáčknuté tlačítko nahoru do seznamu a v druhé funkci zase smaže)
@@ -263,6 +268,11 @@ def on_key_release(key, mod):
     pressed_keys.remove(key)
 
 
+#kontrola kolize
+def tick (dt):
+    for obj in objects:
+            obj.tick(dt)
+pyglet.clock.schedule_interval(tick, 1/30)
 
 #vyčištění okna, vykresleni draka, zobrazeni pozadi
 def on_draw():
