@@ -2,7 +2,7 @@ import math
 import random
 from math import sin, cos
 import pyglet
-from pyglet.window import key
+from pyglet.window import key, gl
 from pyglet.image import Animation, AnimationFrame
 
 #nastavení okna
@@ -16,6 +16,9 @@ i= 20
 
 #pamatuje si zmáčknuté klávesy
 pressed_keys =set()
+
+#vytvořeni Bathe
+batch = pyglet.graphics.Batch()
 
 #načtení obrázku draka
 image = pyglet.image.load('drak-1.png')
@@ -46,6 +49,38 @@ image_asteroid =  pyglet.image.load('meteor.png')
 image_asteroid.anchor_x= image_asteroid.width // 2
 image_asteroid.anchor_y= image_asteroid.height // 2
 
+
+#kód zkopírovaný, na vykreslení kolečka kolem objektů
+def draw_circle(x, y, radius):
+    iterations = 20
+    s = math.sin(2*math.pi / iterations)
+    c = math.cos(2*math.pi / iterations)
+
+    dx, dy = radius, 0
+
+    gl.glBegin(gl.GL_LINE_STRIP)
+    for i in range(iterations+1):
+        gl.glVertex2f(x+dx, y+dy)
+        dx, dy = (dx*c - dy*s), (dy*c + dx*s)
+    gl.glEnd()
+
+#kód zkopírovaný ze zadaní, měří vzdálenost mezi objekty a vyhodnocuje jestli se srazili
+def distance(a, b, wrap_size):
+    """Distance in one direction (x or y)"""
+    result = abs(a - b)
+    if result > wrap_size / 2:
+        result = wrap_size - result
+    return result
+
+def overlaps(a, b):
+    """Returns true iff two space objects overlap"""
+    distance_squared = (distance(a.x, b.x, window.width) ** 2 +
+                        distance(a.y, b.y, window.height) ** 2)
+    max_distance_squared = (a.radius + b.radius) ** 2
+    return distance_squared < max_distance_squared
+
+
+
 # Hlavní postava hry
 class Dragon():
     #nastavení základních vlastností
@@ -53,6 +88,7 @@ class Dragon():
         self.x = window.width/2
         self.y = window.width/2
         self.rotation = 0
+        self.radius = 30
         self.sprite = pyglet.sprite.Sprite(image)
         self.sprite.scale= 0.1
         pyglet.clock.schedule_interval(self.move, 1/30)
@@ -62,6 +98,7 @@ class Dragon():
         self.sprite.x= self.x
         self.sprite.y= self.y
         self.sprite.draw()
+        draw_circle(self.x, self.y, self.radius)
 
     #nastavení pohybu
     def move(self, t):
@@ -90,10 +127,11 @@ drak = Dragon()
 class Astronaut:
         #nastavení základních vlastností
     def __init__(self):
-        self.x = random.randint(0, window.width)
+        self.x = window.width
         self.y = random.randint(0, window.height)
         self.x_speed = 10
         self.y_speed = 10
+        self.radius = 60
         self.rotation = math.pi
         self.rotation_speed = 10
         self.sprite_astronaut = pyglet.sprite.Sprite(image_astronaut)
@@ -109,11 +147,12 @@ class Astronaut:
         self.sprite_astronaut.y= self.y
         self.sprite_astronaut.rotation= math.radians(self.rotation)
         self.sprite_astronaut.draw()
+        draw_circle(self.x, self.y, self.radius)
 
     def tick(self, dt):
-        self.x= self.x + 20 * dt
-        self.y= self.y + 20 * dt
-        self.rotation += ROTATION_SPEED * dt
+        self.x= self.x - random.randint(20, 40) * dt
+        self.y= self.y - 0 * dt
+        self.rotation += -ROTATION_SPEED * dt
         
         #nastavení at nevyjede z okna
         if self.x > window.width:
@@ -135,8 +174,9 @@ class Asteroid:
         self.y = random.randint(0, window.height)
         self.x_speed = -20
         self.y_speed = -20
+        self.radius = 50
         self.rotation = math.pi/2
-        self.rotation_speed = 30
+        self.rotation_speed = 70
         self.sprite_a_fire = pyglet.sprite.Sprite(image_a_fire)
         self.sprite_a_fire.scale = 0.15
         pyglet.clock.schedule_interval(self.tick, 1/30)
@@ -150,6 +190,7 @@ class Asteroid:
         self.sprite_a_fire.y= self.y
         self.sprite_a_fire.rotation= math.radians(self.rotation)
         self.sprite_a_fire.draw()
+        draw_circle(self.x, self.y, self.radius)
 
     def tick(self, dt):
         self.x= self.x - 20 * dt
@@ -176,6 +217,7 @@ class Asteroid_normal:
         self.y = random.randint(0, window.height)
         self.x_speed = -20
         self.y_speed = 0
+        self.radius = 35
         self.rotation = math.pi/2
         self.rotation_speed = 100
         self.sprite_asteroid = pyglet.sprite.Sprite(image_asteroid)
@@ -191,6 +233,7 @@ class Asteroid_normal:
         self.sprite_asteroid.y= self.y
         self.sprite_asteroid.rotation= math.radians(self.rotation)
         self.sprite_asteroid.draw()
+        draw_circle(self.x, self.y, self.radius)
 
     def tick(self, dt):
         self.x= self.x - random.randint(20, 60) * dt
@@ -209,6 +252,9 @@ class Asteroid_normal:
 #vytvoření normálního asteroidu
 asteroid = Asteroid_normal()
 
+
+
+
 #ovládání draka (uloží zmáčknuté tlačítko nahoru do seznamu a v druhé funkci zase smaže)
 def on_key_press(key, mod):
     pressed_keys.add(key)
@@ -216,18 +262,19 @@ def on_key_press(key, mod):
 def on_key_release(key, mod):
     pressed_keys.remove(key)
 
+
+
 #vyčištění okna, vykresleni draka, zobrazeni pozadi
 def on_draw():
     window.clear()
     background_sprite.draw()
+    batch.draw()
     fire_asteroid.draw()
     asteroid.draw()
     astronaut.draw()
     drak.draw()
     
-#rotace astronauta
-def update(dt):
-    astronaut.rotation += 1*dt
+    
 
 
 #registrace funkcí (no nebo jak se to jmenuje)   
@@ -236,7 +283,7 @@ window.push_handlers(
     on_key_release,
     on_draw)
 
-pyglet.clock.schedule_interval(update, 1/60.)
+
 
 #spuštění aplikace ... uplně konec programu
 pyglet.app.run()
