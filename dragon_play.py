@@ -9,11 +9,10 @@ from pyglet.image import Animation, AnimationFrame
 window = pyglet.window.Window(width=800, height=500)
 
 #obecné nastavení
-ROTATION_SPEED = 100 # radians per second.. zatím nevyužívám
-ACCELERATION = 50
+ROTATION_SPEED = 500 # radians per second.. zatím nevyužívám
+ACCELERATION = 0.5
 ASTEROID_SPEED = 1
 i= 20
-
 
 #pamatuje si zmáčknuté klávesy
 pressed_keys =set()
@@ -32,80 +31,75 @@ background_image = pyglet.image.load('background.jpg')
 background_sprite = pyglet.sprite.Sprite(background_image)
 background_sprite.scale= 0.15
 
-#vytvořeni astronauta
+#načtení obrázku astronauta
 image_astronaut =  pyglet.image.load('astronaut.png')
-sprite_astronaut =  pyglet.sprite.Sprite(image_astronaut)
-sprite_astronaut.scale= 0.15
+image_astronaut.anchor_x= image_astronaut.width // 2
+image_astronaut.anchor_y= image_astronaut.height // 2
 
-# Vesmírnou loď  reprezentuje objekt třídy Spaceship.
-class Spaceship():
+#načtení obrázku hořícího asteroidu
+image_a_fire =  pyglet.image.load('meteor_f.png')
+image_a_fire.anchor_x= image_a_fire.width // 2
+image_a_fire.anchor_y= image_a_fire.height // 2
+
+#načtení obrázku hořícího asteroidu
+image_asteroid =  pyglet.image.load('meteor.png')
+image_asteroid.anchor_x= image_asteroid.width // 2
+image_asteroid.anchor_y= image_asteroid.height // 2
+
+# Hlavní postava hry
+class Dragon():
     #nastavení základních vlastností
     def __init__(self):
         self.x = window.width/2
         self.y = window.width/2
         self.rotation = 0
-        self.x_speed = 0
-        self.y_speed = 0
-        self.rotation_speed = 10 #zatím nepouživané
-        self.radius = 30 #zatím nepoužívané
         self.sprite = pyglet.sprite.Sprite(image)
         self.sprite.scale= 0.1
-        pyglet.clock.schedule_interval(self.tick, 1/60)
+        pyglet.clock.schedule_interval(self.move, 1/30)
 
+    #nastavení vykreslení
     def draw(self):
         self.sprite.x= self.x
         self.sprite.y= self.y
         self.sprite.draw()
 
-    def tick(self, dt):
-        self.x= self.x + self.x_speed * dt
-        self.y= self.y + self.y_speed * dt
-        #nastavení pohybu nahoru
+    #nastavení pohybu
+    def move(self, t):
+        #základní pohyb
         if pyglet.window.key.UP in pressed_keys:
-            self.x_speed=  ACCELERATION * sin(self.rotation)
-            self.y_speed= ACCELERATION * cos(self.rotation)
-         #nastavení pohybu doprava(drak letí dopředu)
-        if pyglet.window.key.RIGHT in pressed_keys:
-            self.x_speed=  ACCELERATION * cos(self.rotation)
-            self.y_speed= ACCELERATION * sin(self.rotation)
-        #zastavení draka.. funguje, ale pak se nerozjede znova
-        if pyglet.window.key.SPACE in pressed_keys:
-            self.x_speed= self.x_speed * 0
-            self.y_speed= self.y_speed * 0
-         #nastavení pohybu dozadu 
-        if pyglet.window.key.LEFT in pressed_keys:
-            self.x_speed= - ACCELERATION * cos(self.rotation)
-            self.y_speed= - ACCELERATION * sin(self.rotation)
-        #nastavení pohybu zatím nefunguje
+            self.y += 10 * ACCELERATION
         if pyglet.window.key.DOWN in pressed_keys:
-            self.x_speed=  - ACCELERATION * sin(self.rotation)
-            self.y_speed=  - ACCELERATION * cos(self.rotation)
-        #nastavení at nevyjede z okna
+            self.y -= 10 * ACCELERATION
+        if pyglet.window.key.RIGHT in pressed_keys:
+            self.x += 10 * ACCELERATION
+        if pyglet.window.key.LEFT in pressed_keys:
+            self.x -= 10 * ACCELERATION
+        #nastavení, že když vyjede z okna vrátí se na opačné straně
         if self.x > window.width:
-             self.x = 0
+            self.x = 0
         if self.y > window.width:
-             self.y = 0   
+            self.y = 0   
         if self.x < 0:
-             self.x = window.width
+            self.x = window.width
         if self.y < 0:
-             self.y = window.width  
-
-
+            self.y = window.width  
+        
 #vytvoření draka
-drak = Spaceship()
+drak = Dragon()
 
-class Asteroid:
+class Astronaut:
         #nastavení základních vlastností
     def __init__(self):
         self.x = random.randint(0, window.width)
         self.y = random.randint(0, window.height)
         self.x_speed = 10
         self.y_speed = 10
-        self.rotation = math.pi/2
+        self.rotation = math.pi
         self.rotation_speed = 10
         self.sprite_astronaut = pyglet.sprite.Sprite(image_astronaut)
+        self.sprite_astronaut.scale = 0.15
+        pyglet.clock.schedule_interval(self.tick, 1/30)
     
-
     def update_rotation(self,dt):
         self.rotation += self.rotation_speed * dt
         pyglet.clock.schedule_interval(self.update_rotation, 1/60)
@@ -120,6 +114,7 @@ class Asteroid:
         self.x= self.x + 20 * dt
         self.y= self.y + 20 * dt
         self.rotation += ROTATION_SPEED * dt
+        
         #nastavení at nevyjede z okna
         if self.x > window.width:
              self.x = 0
@@ -130,32 +125,106 @@ class Asteroid:
         if self.y < 0:
              self.y = window.width       
 
-astronaut = Asteroid()
+#vytvoření astronata
+astronaut = Astronaut()
 
+class Asteroid:
+        #nastavení základních vlastností
+    def __init__(self):
+        self.x = window.width
+        self.y = random.randint(0, window.height)
+        self.x_speed = -20
+        self.y_speed = -20
+        self.rotation = math.pi/2
+        self.rotation_speed = 30
+        self.sprite_a_fire = pyglet.sprite.Sprite(image_a_fire)
+        self.sprite_a_fire.scale = 0.15
+        pyglet.clock.schedule_interval(self.tick, 1/30)
+    
+    #def update_rotation(self,dt):
+       # self.rotation += self.rotation_speed * dt
+       # pyglet.clock.schedule_interval(self.update_rotation, 1/60)
 
-#nefungující mávání křídly
-t = 0.3
-def zmen(t):
-        drak.image = obrazek2
-        pyglet.clock.schedule_once(zmen_zpatky, 0.2)
-def zmen_zpatky(t):
-        drak.image = image
-        pyglet.clock.schedule_once(zmen, 0.2)
-pyglet.clock.schedule_interval(drak.tick, 1/30)
-pyglet.clock.schedule_once(zmen, 1)
+    def draw(self):
+        self.sprite_a_fire.x= self.x
+        self.sprite_a_fire.y= self.y
+        self.sprite_a_fire.rotation= math.radians(self.rotation)
+        self.sprite_a_fire.draw()
 
+    def tick(self, dt):
+        self.x= self.x - 20 * dt
+        self.y= self.y - 0 * dt
+        #self.rotation += ROTATION_SPEED * dt
+        
+        #nastavení at nevyjede z okna
+        if self.x > window.width:
+             self.x = 0
+        if self.y > window.width:
+             self.y = 0   
+        if self.x < 0:
+             self.x = window.width
+        if self.y < 0:
+             self.y = window.width       
 
-#ovládání draka (uloží zmáčknuté tlačítko nahoru do seznamu)
+#vytvoření hořícího asteroidu
+fire_asteroid = Asteroid()
+
+class Asteroid_normal:
+    #nastavení základních vlastností
+    def __init__(self):
+        self.x = window.width
+        self.y = random.randint(0, window.height)
+        self.x_speed = -20
+        self.y_speed = 0
+        self.rotation = math.pi/2
+        self.rotation_speed = 100
+        self.sprite_asteroid = pyglet.sprite.Sprite(image_asteroid)
+        self.sprite_asteroid.scale = 0.15
+        pyglet.clock.schedule_interval(self.tick, 1/30)
+    
+    def update_rotation(self,dt):
+       self.rotation += self.rotation_speed * dt
+       pyglet.clock.schedule_interval(self.update_rotation, 1/60)
+
+    def draw(self):
+        self.sprite_asteroid.x= self.x
+        self.sprite_asteroid.y= self.y
+        self.sprite_asteroid.rotation= math.radians(self.rotation)
+        self.sprite_asteroid.draw()
+
+    def tick(self, dt):
+        self.x= self.x - random.randint(20, 60) * dt
+        self.y= self.y - 0 * dt
+        self.rotation += ROTATION_SPEED * dt
+        
+        #nastavení at nevyjede z okna
+        if self.x > window.width:
+             self.x = 0
+        if self.y > window.width:
+             self.y = 0   
+        if self.x < 0:
+             self.x = window.width
+        if self.y < 0:
+             self.y = window.width 
+#vytvoření normálního asteroidu
+asteroid = Asteroid_normal()
+
+#ovládání draka (uloží zmáčknuté tlačítko nahoru do seznamu a v druhé funkci zase smaže)
 def on_key_press(key, mod):
     pressed_keys.add(key)
+
+def on_key_release(key, mod):
+    pressed_keys.remove(key)
 
 #vyčištění okna, vykresleni draka, zobrazeni pozadi
 def on_draw():
     window.clear()
     background_sprite.draw()
-    sprite_astronaut.draw()
+    fire_asteroid.draw()
+    asteroid.draw()
+    astronaut.draw()
     drak.draw()
-
+    
 #rotace astronauta
 def update(dt):
     astronaut.rotation += 1*dt
@@ -164,9 +233,8 @@ def update(dt):
 #registrace funkcí (no nebo jak se to jmenuje)   
 window.push_handlers(
     on_key_press,
+    on_key_release,
     on_draw)
-
-
 
 pyglet.clock.schedule_interval(update, 1/60.)
 
