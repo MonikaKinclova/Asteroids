@@ -1,6 +1,7 @@
 import math
 import random
 from math import sin, cos
+from time import sleep
 import pyglet
 from pyglet.window import key, gl
 from pyglet.image import Animation, AnimationFrame
@@ -22,10 +23,6 @@ pressed_keys =set()
 image = pyglet.image.load('drak-1.png')
 image.anchor_x= image.width // 2
 image.anchor_y= image.height // 2
-
-obrazek2 = pyglet.image.load('drak-2.png')
-sprite = pyglet.sprite.Sprite(image)
-#batch = pyglet.graphics.Batch().. zatím nepoužívám
 
 #načtení obrázku na pozadí a nastavení jako pozadí okna
 background_image = pyglet.image.load('background.jpg')
@@ -80,7 +77,7 @@ def overlaps(a, b):
 
 
 # Hlavní postava hry
-class Dragon():
+class Dragon:
     #nastavení základních vlastností
     def __init__(self):
         self.x = window.width/2
@@ -131,16 +128,57 @@ class Dragon():
             if overlaps(self, obj) and self != obj:
                 obj.hit_by_dragon(self)
                 print('Naboural si')
-    
+
+
+       #když drak potká fireball.. nic se nestane
+    def hit_by_fireball(self, fireball):
+        pass
+
+
     def delete(self):
         try:
             objects.remove(self)
         except ValueError:
             pass
-    
 
-#vytvoření draka
-drak = Dragon()
+class Fireball:
+    #nastavení základních vlastností
+    def __init__(self):
+        self.x = window.width
+        self.y = random.randint(0, window.height)
+        self.x_speed = 10
+        self.y_speed = 10
+        self.radius = 15
+        self.sprite_fireball = pyglet.sprite.Sprite(image_fireball)
+        self.sprite_fireball.rotation = 180
+        self.sprite_fireball.scale = 0.15
+        pyglet.clock.schedule_interval(self.tick, 1/30)
+    
+    #vykreslení, zbytek vykreslení je uveden v Class Dragon, kde se objekt vytváří
+    def draw(self):
+        self.sprite_fireball.x = self.x + 50
+        self.sprite_fireball.y = self.y
+        self.sprite_fireball.draw()
+        draw_circle(self.x, self.y, self.radius)
+
+    def tick(self, dt):
+        self.x= self.x + 100 * dt
+        self.y= self.y + 0 * dt
+   
+    #funkce na odsranění objektu z hracího pole
+    def delete(self):
+        try:
+            objects.remove(self)
+        except ValueError:
+            pass
+
+    def hit_by_dragon (self, drak):
+        pass
+   
+    #sestřelení fireballem
+    def hit_by_fireball(self, fireball):
+        self.delete()
+        fireball.delete()
 
 class Astronaut:
         #nastavení základních vlastností
@@ -180,13 +218,29 @@ class Astronaut:
         if self.x < 0:
              self.x = window.width
         if self.y < 0:
-             self.y = window.width     
+             self.y = window.width  
+    
+        for obj in list(objects):
+            if overlaps(self, obj) and self != obj:
+                obj.hit_by_fireball(self)
+                print('Fireball sestřel objekt')
+
+    #funkce na odsranění objektu z hracího pole
+    def delete(self):
+        try:
+            objects.remove(self)
+        except ValueError:
+            pass
+    
+    #srážka s drakem   
     def hit_by_dragon (self, drak):
         print('naboural tě astronaut')
         drak.delete()
-
-#vytvoření astronata
-astronaut = Astronaut()
+    
+    #sestřelení fireballem
+    def hit_by_fireball(self, fireball):
+        self.delete()
+        fireball.delete()
 
 class Asteroid:
         #nastavení základních vlastností
@@ -228,13 +282,29 @@ class Asteroid:
         if self.y < 0:
              self.y = window.width       
 
+        for obj in list(objects):
+            if overlaps(self, obj) and self != obj:
+                obj.hit_by_fireball(self)
+                print('Fireball sestřel objekt')
+
+
+    #funkce na odsranění objektu z hracího pole
+    def delete(self):
+        try:
+            objects.remove(self)
+        except ValueError:
+            pass
+
     def hit_by_dragon (self, drak):
         print('naboural tě hořící asteroid')
         drak.delete()
 
-#vytvoření hořícího asteroidu
-fire_asteroid = Asteroid()
 
+    #sestřelení fireballem
+    def hit_by_fireball(self, fireball):
+        self.delete()
+        fireball.delete()
+  
 class Asteroid_normal:
     #nastavení základních vlastností
     def __init__(self):
@@ -275,41 +345,68 @@ class Asteroid_normal:
         if self.y < 0:
              self.y = window.width 
 
+        for obj in list(objects):
+            if overlaps(self, obj) and self != obj:
+                obj.hit_by_fireball(self)
+                print('Fireball sestřel objekt')
+
+    #sestřelení fireballem
+    def hit_by_fireball(self, fireball):
+        self.delete()
+        fireball.delete()
+
     def hit_by_dragon (self, drak):
         print('naboural tě asteroid')
         drak.delete()
-#vytvoření normálního asteroidu
-asteroid = Asteroid_normal()
 
-class Fireball:
-        #nastavení základních vlastností
-    def __init__(self):
-        self.x = window.width
-        self.y = random.randint(0, window.height)
-        self.x_speed = 10
-        self.y_speed = 10
-        self.radius = 15
-        self.sprite_fireball = pyglet.sprite.Sprite(image_fireball)
-        self.sprite_fireball.rotation = 180
-        self.sprite_fireball.scale = 0.15
-        pyglet.clock.schedule_interval(self.tick, 1/30)
+    #funkce na odsranění objektu z hracího pole
+    def delete(self):
+        try:
+            objects.remove(self)
+        except ValueError:
+            pass
+
+
+#vyčištění okna, vykresleni draka a  dalších objektů, zobrazeni pozadi
+@window.event
+def on_draw():
+    window.clear()
+    background_sprite.draw()
+    for obj in objects:
+        obj.draw()
+        draw_circle(obj.x, obj.y, obj.radius)
+
+#seznam objektů, které jsou ve hře
+drak=Dragon()
+astronaut= Astronaut()
+asteroid= Asteroid_normal()
+fire_asteroid= Asteroid()
+
+#seznam objektů ve vesmíru
+objects = [drak, asteroid, astronaut, fire_asteroid, Fireball()]
+
+
+def check_objects(xxx):
     
-    def draw(self):
-        self.sprite_fireball.x = self.x
-        self.sprite_fireball.y = self.y
-        self.sprite_fireball.draw()
-        draw_circle(self.x, self.y, self.radius)
+    #tisk pro kontrolu co je v objektech.. pak smazat, az to bude fungovat
+    for obj in objects:
+        print(obj.__class__.__name__)
 
-    def tick(self, dt):
-        self.x= self.x + 30 * dt
-        self.y= self.y + 0 * dt
-   
-    def hit_by_dragon (self, drak):
-        pass
+    #vytváření nových objektů do vesmíru, když se sestřelí ty co už tam byly
+    if 'asteroid' not in [type(obj).__name__ for obj in objects]:
+        objects.append(Asteroid_normal())
+        on_draw()
+        draw_circle(obj.x, obj.y, obj.radius)
+    elif 'astronaut' not in [type(obj).__name__ for obj in objects]:
+        objects.append(Astronaut())
+        on_draw()
+        draw_circle(obj.x, obj.y, obj.radius)
+    elif 'fire_asteroid' not in [type(obj).__name__ for obj in objects]:
+        objects.append(Asteroid())
+        on_draw()
+        draw_circle(obj.x, obj.y, obj.radius)
 
-
-objects = [drak, fire_asteroid,asteroid, astronaut, Fireball()]
-
+pyglet.clock.schedule_interval(check_objects, 1.0)
 
 #ovládání draka (uloží zmáčknuté tlačítko nahoru do seznamu a v druhé funkci zase smaže)
 def on_key_press(key, mod):
@@ -318,25 +415,12 @@ def on_key_press(key, mod):
 def on_key_release(key, mod):
     pressed_keys.remove(key)
 
-#kontrola kolize
+#kontrola kolize 
 def tick (dt):
     for obj in objects:
             obj.tick(dt)
 pyglet.clock.schedule_interval(tick, 1/30)
 
-#vyčištění okna, vykresleni draka, zobrazeni pozadi
-def on_draw():
-    window.clear()
-    background_sprite.draw()
-
-    #fire_asteroid.draw()
-    #asteroid.draw()
-    #astronaut.draw()
-    #fireball.draw()
-    #drak.draw()
-    for obj in objects:
-        obj.draw()
-    
 #registrace funkcí (no nebo jak se to jmenuje)   
 window.push_handlers(
     on_key_press,
